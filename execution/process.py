@@ -1,11 +1,11 @@
-# invoke pytest on single test/test file 
+# invoke pytest on single test/test file
 import pytest
 import sys
 import json
 output_test_info = []
 
 def pytest_runtest_logreport(report):
-    if(report.when == "call" or report.failed):
+    if(report.when == "call"):
         stdout = ""
         stderr = ""
         failure_trace = ""
@@ -13,9 +13,10 @@ def pytest_runtest_logreport(report):
         exception_type = ""
         for heading, content in report.sections:
             if "stdout" in heading:
-                stdout = content
+                stdout += content
             elif "stderr" in heading:
-                stderr = content
+                stderr += content
+
         # accounting for assert test case and report.failed for traces
         if(report.failed):
             failure_trace = str(report.longrepr)
@@ -36,4 +37,3 @@ if __name__ == "__main__":
     exit_code = pytest.main([test_file, "-q"], plugins=[sys.modules[__name__]])
     print(json.dumps(output_test_info))
     sys.exit(exit_code)
-
