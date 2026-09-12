@@ -33,7 +33,8 @@ def pytest_runtest_logreport(report):
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         sys.exit(1)
-    test_file = sys.argv[1]
-    exit_code = pytest.main([test_file, "-q"], plugins=[sys.modules[__name__]])
+    
+    pytest_args = sys.argv[1:] + ["-q", "--disable-warnings"]
+    exit_code = pytest.main(pytest_args, plugins=[sys.modules[__name__]])
     print(json.dumps(output_test_info))
     sys.exit(exit_code)
