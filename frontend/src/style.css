@@ -12,6 +12,9 @@ body { margin: 0; }
 .page { max-width: 960px; margin: auto; padding: 0 24px; }
 header { padding: 42px 0 24px; border-bottom: 1px solid #d9dccd; }
 h1 { margin: 0; font-size: 36px; font-weight: 700; color: #2e4535; }
+.title-dot { display: inline-block; width: 8px; height: 8px; margin-left: 8px; border-radius: 50%; background: #839744; }
+.made-with-love { font-size: 13px; }
+.made-with-love span { color: #7c8e35; }
 h2 { font-size: 23px; font-weight: 600; margin: 0 0 12px; }
 h3 { font-size: 18px; font-weight: 600; margin: 0 0 10px; }
 h4 { font-weight: 600; margin: 18px 0 8px; }

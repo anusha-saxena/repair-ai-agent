@@ -80,8 +80,9 @@ export default function App() {
   const stage = job?.status === 'queued' ? 0 : Math.min(3, Math.floor((job?.elapsed_seconds || 0) / 12));
   return <div className="page">
     <header>
-      <h1>FlakeDetective</h1>
+      <h1>FlakeDetective<span className="title-dot" aria-hidden="true" /></h1>
       <p>An agentic approach to diagnosing and repairing flaky pytest tests.</p>
+      <p className="made-with-love">Made with <span role="img" aria-label="love">♡</span> by Anusha</p>
     </header>
     <main>
       <section className="intro">
@@ -144,6 +145,6 @@ export default function App() {
         <p className="footnote">Passing these runs is a useful check, not a guarantee. Results expire after 24 hours.</p>
       </section>
     </main>
-    <footer>Made with love <span aria-hidden="true">♡</span> by Anusha</footer>
+    <footer>Made with <span role="img" aria-label="love">♡</span> by Anusha</footer>
   </div>;
 }
