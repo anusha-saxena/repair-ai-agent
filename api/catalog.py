@@ -8,7 +8,7 @@ def load_demos(root):
     demos = {}
     root = Path(root).resolve()
     for folder in sorted(root.iterdir()):
-        if not folder.is_dir() or folder.is_symlink():
+        if not folder.is_dir() or folder.is_symlink() or folder.name == "__pycache__":
             continue
         manifest = folder / "demo.json"
         if manifest.is_symlink():

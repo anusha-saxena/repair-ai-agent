@@ -1,17 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import DiffViewer from 'react-diff-viewer-continued';
 
-const API = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/$/, '');
-const steps = ['Observing', 'Diagnosing', 'Repairing', 'Verifying'];
 const rateRows = [['Baseline', 'baseline_pass_rate'], ['Shuffled', 'shuffled_pass_rate'], ['Suite', 'full_suite_pass_rate']];
-
-async function api(path, options = {}) {
-  const response = await fetch(`${API}${path}`, options);
-  if (response.status === 429) throw new Error('This demo is rate-limited. Try again in a bit.');
-  if (response.status === 404) throw new Error('This demo or result has expired. Start a new run.');
-  if (!response.ok) throw new Error('The demo could not finish. Please try again.');
-  return response.json();
-}
 
 function Results({ result }) {
   return <section className="results" aria-label="Repair results">
@@ -40,8 +30,8 @@ function Results({ result }) {
 function ActivityLog({ events }) {
   if (!events?.length) return null;
   return <section className="activity-log" aria-label="Execution activity">
-    <h2>Run log</h2>
-    <p>Recorded tool actions and measured results.</p>
+    <h2>Recorded run log</h2>
+    <p>Tool actions and measured results from the original run. Times show elapsed time during that run.</p>
     <ol>{events.map((event, i) => (
       <li key={i}><span className="event-time">{event.elapsed_seconds.toFixed(1)}s</span> {event.message}</li>
     ))}</ol>
@@ -53,52 +43,62 @@ export default function App() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [active, setActive] = useState(null);
-  const [job, setJob] = useState(null);
   const [result, setResult] = useState(null);
-  const [busy, setBusy] = useState(false);
-  const controller = useRef(null);
+  const [replay, setReplay] = useState(null);
+  const [visibleEvents, setVisibleEvents] = useState(0);
+
+  useEffect(() => {
+    if (!replay) return;
+    let count = 0;
+    const timer = setInterval(() => {
+      count += 1;
+      setVisibleEvents(count);
+      if (count >= (replay.result.activity?.length || 0)) {
+        setResult(replay.result);
+        setReplay(null);
+      }
+    }, 500);
+    return () => clearInterval(timer);
+  }, [replay]);
 
   useEffect(() => {
     const abort = new AbortController();
-    api('/demos', { signal: abort.signal }).then(setDemos).catch(err => { if (err.name !== 'AbortError') setError('Could not load the demo catalog. Please refresh to try again.'); }).finally(() => { if (!abort.signal.aborted) setLoading(false); });
-    return () => { abort.abort(); controller.current?.abort(); };
+    fetch(`${import.meta.env.BASE_URL}recordings/demos.json`, { signal: abort.signal })
+      .then(response => {
+        if (!response.ok) throw new Error('Recording catalog unavailable');
+        return response.json();
+      })
+      .then(recordings => {
+        if (!Array.isArray(recordings) || !recordings.length ||
+            recordings.some(demo => !demo.id || !demo.result || !demo.original_source)) {
+          throw new Error('Invalid recording catalog');
+        }
+        setDemos(recordings);
+      })
+      .catch(err => {
+        if (err.name !== 'AbortError') setError('Could not load the recordings. Please refresh to try again.');
+      })
+      .finally(() => { if (!abort.signal.aborted) setLoading(false); });
+    return () => abort.abort();
   }, []);
 
-  useEffect(() => {
-    if (!job?.job_id || ['complete', 'error'].includes(job.status)) return;
-    const abort = new AbortController();
-    let timer;
-    let stopped = false;
-    const poll = async () => {
-      try {
-        const next = await api(`/status/${encodeURIComponent(job.job_id)}`, { signal: abort.signal });
-        if (stopped) return;
-        setJob(next);
-        if (next.status === 'complete') { setResult(next.result); setBusy(false); }
-        else if (next.status === 'error') { setError(next.result?.message || 'The demo could not finish. Please try again.'); setBusy(false); }
-        else timer = setTimeout(poll, 2000);
-      } catch (err) {
-        if (err.name !== 'AbortError') { setError(err.message); setBusy(false); }
-      }
-    };
-    timer = setTimeout(poll, 2000);
-    return () => { stopped = true; abort.abort(); clearTimeout(timer); };
-  }, [job?.job_id, job?.status]);
-
-  async function run(demo) {
-    if (busy) return;
-    setBusy(true); setActive(demo); setError(''); setResult(null); setJob(null);
-    const abort = new AbortController();
-    controller.current = abort;
-    try {
-      const { job_id } = await api(`/run/${encodeURIComponent(demo.id)}`, { method: 'POST', signal: abort.signal });
-      setJob({ job_id, status: 'queued', elapsed_seconds: 0 });
-    } catch (err) { if (err.name !== 'AbortError') setError(err.message); setBusy(false); }
+  function viewDemo(demo) {
+    if (replay) return;
+    setActive(demo);
+    setResult(null);
+    setVisibleEvents(0);
+    setReplay(demo);
+    setError('');
   }
 
-  const events = result?.activity || job?.activity || [];
-  const phase = events.at(-1)?.phase;
-  const stage = ['observing', 'diagnosing', 'repairing', 'verifying'].indexOf(phase);
+  function skipReplay() {
+    setResult(replay.result);
+    setReplay(null);
+  }
+
+  const events = result?.activity || replay?.result.activity?.slice(0, visibleEvents) || [];
+  const phase = events.at(-1)?.phase || 'observing';
+  const stages = [['observing', 'Observe'], ['diagnosing', 'Diagnose'], ['repairing', 'Repair'], ['verifying', 'Verify']];
   return <div className="page">
     <header>
       <h1>FlakeDetective<span className="title-dot" aria-hidden="true" /></h1>
@@ -124,8 +124,8 @@ export default function App() {
           sampled runs. After three unsuccessful attempts, the original file is restored.</p>
       </section>
       <section className="demo-heading">
-        <h2>Try a demo</h2>
-        <p>Choose a small example to see the diagnosis, measured pass rates, and source changes.</p>
+        <h2>Explore a recorded demo</h2>
+        <p>Captured from real local FlakeDetective runs.</p>
       </section>
       <section aria-label="Demo examples">
         {loading ? <p role="status">Loading demos…</p> : (
@@ -139,8 +139,8 @@ export default function App() {
                   <p>Target: <code>{demo.target_test.split('::')[1]}</code></p>
                   <pre>{demo.original_source}</pre>
                 </details>
-                <button disabled={busy} onClick={() => run(demo)}>
-                  {busy && active?.id === demo.id ? 'Running…' : 'Run Demo'}
+                <button disabled={!!replay} onClick={() => viewDemo(demo)}>
+                  {replay?.id === demo.id ? 'Replaying…' : 'Replay demo'}
                 </button>
               </article>
             ))}
@@ -148,9 +148,10 @@ export default function App() {
         )}
       </section>
       {error && <div className="error" role="alert">{error}</div>}
-      {active && job && (
+      {active && (
         <section className="test-context">
-          <h2>The test being investigated</h2>
+          <h2>The test in this recording</h2>
+          <p>Recorded {new Date(active.recorded_at).toLocaleDateString()} · {active.runs} runs per mode. These are saved results, not a live repair.</p>
           <p>{active.description}</p>
           <p>Target: <code>{active.target_test.split('::')[1]}</code>. The other tests in this file provide its execution context.</p>
           <details className="source-preview" open>
@@ -159,28 +160,49 @@ export default function App() {
           </details>
         </section>
       )}
-      {busy && (
-        <section className="progress" aria-live="polite">
-          <h2>Running: {active?.display_name}</h2>
-          <p className="steps">
-            {steps.map((step, i) => (
-              <span key={step}>
-                {i > 0 && ' → '}
-                <span className={i === stage ? 'current-step' : ''}>{step}</span>
-              </span>
-            ))}
-          </p>
-          <p>{job?.status === 'queued' ? 'Your demo is queued.' : 'Testing and checking the fix…'}
-            {' '}Progress updates when the tool records an action.</p>
+      {replay && (
+        <section className="progress" role="status" aria-live="polite">
+          <h2>Replaying recorded run</h2>
+          <p className="steps">{stages.map(([key, label], i) => (
+            <span key={key}>{i > 0 && ' → '}<span className={phase === key ? 'current-step' : ''}>{label}</span></span>
+          ))}</p>
+          <p>{events.at(-1)?.message || 'Starting the recorded walkthrough…'}</p>
+          <button onClick={skipReplay}>Skip to results</button>
         </section>
       )}
       <ActivityLog events={events}/>
       {result && <Results result={result}/>}
       <section className="how">
-        <h2>About this demo</h2>
-        <p>The React frontend submits a demo ID to FastAPI, which runs the Python orchestrator
-          on a temporary copy. Job status and results are stored in SQLite and polled by this page.</p>
-        <p className="footnote">Passing these runs is a useful check, not a guarantee. Results expire after 24 hours.</p>
+        <h2>Behind FlakeDetective</h2>
+        <p>FlakeDetective combines controlled test experiments, static analysis, and an AI repair
+          agent in a bounded feedback loop. The Python orchestrator decides when to retry,
+          accept a patch, or restore the original file using measured test outcomes.</p>
+        <p className="architecture-flow">React → FastAPI → Python orchestrator → pytest sandbox<br />
+          SQLite stores jobs · Claude proposes repairs · pytest checks them</p>
+        <ul className="architecture-list">
+          <li><strong>API and job lifecycle:</strong> the live FastAPI backend accepts a curated
+            demo ID, creates a temporary copy, and queues execution. SQLite stores job status,
+            timestamps, results, and submission limits. The frontend can poll for progress;
+            an asyncio cleanup task removes jobs and their working directories after 24 hours,
+            sweeping on startup and hourly.</li>
+          <li><strong>Evidence before generation:</strong> separate pytest subprocesses measure
+            isolated, shuffled, and file-order behavior. The classifier identifies patterns
+            from those pass rates, while AST analysis flags possible shared state. Both become
+            context for the repair agent.</li>
+          <li><strong>Repair and verification:</strong> Claude returns a complete Python file,
+            which is checked for valid syntax before execution. Each patch is tested again;
+            failed patches and failure evidence inform the next attempt, up to three attempts.
+            The original file is backed up and restored if no repair verifies.</li>
+          <li><strong>Execution boundaries:</strong> the Docker Compose deployment uses a
+            Bubblewrap sandbox, resource limits, and an Anthropic-only network proxy.
+            Requests select predefined demos rather than uploading executable code, and
+            public results exclude raw traces and private execution details.</li>
+        </ul>
+        <p><strong>This portfolio version:</strong> React replays saved results from real local
+          runs, so the public page needs no backend or API key. The architecture above describes
+          the implemented live backend and CLI; SQLite and the sandbox are used in the live
+          deployment, rather than during this recorded replay.</p>
+        <p className="footnote">Passing these sampled runs is a useful check, not a guarantee.</p>
       </section>
     </main>
     <footer>Made with <span role="img" aria-label="love">♡</span> by Anusha</footer>

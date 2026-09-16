@@ -1,0 +1,216 @@
+[
+  {
+    "id": "mutable_default_arg",
+    "display_name": "Mutable default argument",
+    "description": "A helper keeps a list between calls, so earlier tests change later results.",
+    "target_test": "test_defaults.py::test_b_fresh_list",
+    "category_hint": "Order Dependency",
+    "original_source": "def add_item(item, items=[]):\n    items.append(item)\n    return items\n\n\ndef test_a_previous_call():\n    assert add_item(\"first\") == [\"first\"]\n\n\ndef test_b_fresh_list():\n    assert add_item(\"second\") == [\"second\"]\n",
+    "recorded_at": "2026-09-16T23:35:33.275600+00:00",
+    "runs": 5,
+    "result": {
+      "diagnosis": {
+        "diagnosis_category": "Order Dependency",
+        "diagnosis_description": "Test passes perfectly in isolation but fails when run alongside other tests. This indicates it expects a clean state but another test is polluting it."
+      },
+      "before": {
+        "baseline_pass_rate": 100.0,
+        "shuffled_pass_rate": 60.0,
+        "isolated_pass_rate": 100.0,
+        "full_suite_pass_rate": 0.0
+      },
+      "after": {
+        "baseline_pass_rate": 100.0,
+        "shuffled_pass_rate": 100.0,
+        "isolated_pass_rate": 100.0,
+        "full_suite_pass_rate": 100.0
+      },
+      "suspicious_vars": [],
+      "original_source": "def add_item(item, items=[]):\n    items.append(item)\n    return items\n\n\ndef test_a_previous_call():\n    assert add_item(\"first\") == [\"first\"]\n\n\ndef test_b_fresh_list():\n    assert add_item(\"second\") == [\"second\"]\n",
+      "patched_source": "import pytest\n\n\ndef add_item(item, items=None):\n    if items is None:\n        items = []\n    items.append(item)\n    return items\n\n\ndef test_a_previous_call():\n    assert add_item(\"first\") == [\"first\"]\n\n\ndef test_b_fresh_list():\n    assert add_item(\"second\") == [\"second\"]\n",
+      "attempts": 1,
+      "success": true,
+      "activity": [
+        {
+          "elapsed_seconds": 0.0,
+          "phase": "observing",
+          "message": "5 runs per mode: running the target alone, with shuffled neighbors, and in file order."
+        },
+        {
+          "elapsed_seconds": 3.6,
+          "phase": "diagnosing",
+          "message": "Original test: isolated 100.0%, shuffled 60.0%, suite 0.0% passed."
+        },
+        {
+          "elapsed_seconds": 3.6,
+          "phase": "diagnosing",
+          "message": "Rule-based diagnosis: Order Dependency. AST shared-state candidates: none detected."
+        },
+        {
+          "elapsed_seconds": 4.3,
+          "phase": "repairing",
+          "message": "Attempt 1: requesting a repair using the source, diagnosis, and failure evidence."
+        },
+        {
+          "elapsed_seconds": 6.4,
+          "phase": "verifying",
+          "message": "Attempt 1: patch written to the temporary copy. Rerunning the experiments."
+        },
+        {
+          "elapsed_seconds": 10.1,
+          "phase": "verifying",
+          "message": "Attempt 1: isolated 100.0%, shuffled 100.0%, suite 100.0% passed."
+        },
+        {
+          "elapsed_seconds": 10.1,
+          "phase": "complete",
+          "message": "Run finished successfully."
+        }
+      ]
+    }
+  },
+  {
+    "id": "order_dependency",
+    "display_name": "Shared dictionary",
+    "description": "One test leaves a dictionary dirty. The next expects a clean start.",
+    "target_test": "test_pollution.py::test_b_victim",
+    "category_hint": "Order Dependency",
+    "original_source": "SHARED_STATE = {}\n\n\ndef test_a_polluter():\n    SHARED_STATE[\"polluted\"] = True\n    assert SHARED_STATE[\"polluted\"] is True\n\n\ndef test_b_victim():\n    assert SHARED_STATE == {}, \"Another test left shared state behind!\"\n",
+    "recorded_at": "2026-09-16T23:35:42.768226+00:00",
+    "runs": 5,
+    "result": {
+      "diagnosis": {
+        "diagnosis_category": "Order Dependency",
+        "diagnosis_description": "Test passes perfectly in isolation but fails when run alongside other tests. This indicates it expects a clean state but another test is polluting it."
+      },
+      "before": {
+        "baseline_pass_rate": 100.0,
+        "shuffled_pass_rate": 40.0,
+        "isolated_pass_rate": 100.0,
+        "full_suite_pass_rate": 0.0
+      },
+      "after": {
+        "baseline_pass_rate": 100.0,
+        "shuffled_pass_rate": 100.0,
+        "isolated_pass_rate": 100.0,
+        "full_suite_pass_rate": 100.0
+      },
+      "suspicious_vars": [
+        "SHARED_STATE"
+      ],
+      "original_source": "SHARED_STATE = {}\n\n\ndef test_a_polluter():\n    SHARED_STATE[\"polluted\"] = True\n    assert SHARED_STATE[\"polluted\"] is True\n\n\ndef test_b_victim():\n    assert SHARED_STATE == {}, \"Another test left shared state behind!\"\n",
+      "patched_source": "import pytest\n\nSHARED_STATE = {}\n\n\n@pytest.fixture(autouse=True)\ndef reset_shared_state():\n    SHARED_STATE.clear()\n    yield\n    SHARED_STATE.clear()\n\n\ndef test_a_polluter():\n    SHARED_STATE[\"polluted\"] = True\n    assert SHARED_STATE[\"polluted\"] is True\n\n\ndef test_b_victim():\n    assert SHARED_STATE == {}, \"Another test left shared state behind!\"\n",
+      "attempts": 1,
+      "success": true,
+      "activity": [
+        {
+          "elapsed_seconds": 0.0,
+          "phase": "observing",
+          "message": "5 runs per mode: running the target alone, with shuffled neighbors, and in file order."
+        },
+        {
+          "elapsed_seconds": 3.8,
+          "phase": "diagnosing",
+          "message": "Original test: isolated 100.0%, shuffled 40.0%, suite 0.0% passed."
+        },
+        {
+          "elapsed_seconds": 3.8,
+          "phase": "diagnosing",
+          "message": "Rule-based diagnosis: Order Dependency. AST shared-state candidates: SHARED_STATE."
+        },
+        {
+          "elapsed_seconds": 3.8,
+          "phase": "repairing",
+          "message": "Attempt 1: requesting a repair using the source, diagnosis, and failure evidence."
+        },
+        {
+          "elapsed_seconds": 6.0,
+          "phase": "verifying",
+          "message": "Attempt 1: patch written to the temporary copy. Rerunning the experiments."
+        },
+        {
+          "elapsed_seconds": 9.5,
+          "phase": "verifying",
+          "message": "Attempt 1: isolated 100.0%, shuffled 100.0%, suite 100.0% passed."
+        },
+        {
+          "elapsed_seconds": 9.5,
+          "phase": "complete",
+          "message": "Run finished successfully."
+        }
+      ]
+    }
+  },
+  {
+    "id": "shared_counter",
+    "display_name": "Shared counter",
+    "description": "A module counter leaks between tests that expect their own first increment.",
+    "target_test": "test_counter.py::test_b_first_increment",
+    "category_hint": "Order Dependency",
+    "original_source": "COUNTER = 0\n\n\ndef increment():\n    global COUNTER\n    COUNTER += 1\n    return COUNTER\n\n\ndef test_a_first_increment():\n    assert increment() == 1\n\n\ndef test_b_first_increment():\n    assert increment() == 1\n",
+    "recorded_at": "2026-09-16T23:35:52.154419+00:00",
+    "runs": 5,
+    "result": {
+      "diagnosis": {
+        "diagnosis_category": "Order Dependency",
+        "diagnosis_description": "Test passes perfectly in isolation but fails when run alongside other tests. This indicates it expects a clean state but another test is polluting it."
+      },
+      "before": {
+        "baseline_pass_rate": 100.0,
+        "shuffled_pass_rate": 60.0,
+        "isolated_pass_rate": 100.0,
+        "full_suite_pass_rate": 0.0
+      },
+      "after": {
+        "baseline_pass_rate": 100.0,
+        "shuffled_pass_rate": 100.0,
+        "isolated_pass_rate": 100.0,
+        "full_suite_pass_rate": 100.0
+      },
+      "suspicious_vars": [
+        "COUNTER"
+      ],
+      "original_source": "COUNTER = 0\n\n\ndef increment():\n    global COUNTER\n    COUNTER += 1\n    return COUNTER\n\n\ndef test_a_first_increment():\n    assert increment() == 1\n\n\ndef test_b_first_increment():\n    assert increment() == 1\n",
+      "patched_source": "COUNTER = 0\n\n\ndef increment():\n    global COUNTER\n    COUNTER += 1\n    return COUNTER\n\n\nimport pytest\n\n@pytest.fixture(autouse=True)\ndef reset_counter():\n    global COUNTER\n    COUNTER = 0\n    yield\n    COUNTER = 0\n\n\ndef test_a_first_increment():\n    assert increment() == 1\n\n\ndef test_b_first_increment():\n    assert increment() == 1\n",
+      "attempts": 1,
+      "success": true,
+      "activity": [
+        {
+          "elapsed_seconds": 0.0,
+          "phase": "observing",
+          "message": "5 runs per mode: running the target alone, with shuffled neighbors, and in file order."
+        },
+        {
+          "elapsed_seconds": 3.7,
+          "phase": "diagnosing",
+          "message": "Original test: isolated 100.0%, shuffled 60.0%, suite 0.0% passed."
+        },
+        {
+          "elapsed_seconds": 3.7,
+          "phase": "diagnosing",
+          "message": "Rule-based diagnosis: Order Dependency. AST shared-state candidates: COUNTER."
+        },
+        {
+          "elapsed_seconds": 3.7,
+          "phase": "repairing",
+          "message": "Attempt 1: requesting a repair using the source, diagnosis, and failure evidence."
+        },
+        {
+          "elapsed_seconds": 6.0,
+          "phase": "verifying",
+          "message": "Attempt 1: patch written to the temporary copy. Rerunning the experiments."
+        },
+        {
+          "elapsed_seconds": 9.4,
+          "phase": "verifying",
+          "message": "Attempt 1: isolated 100.0%, shuffled 100.0%, suite 100.0% passed."
+        },
+        {
+          "elapsed_seconds": 9.4,
+          "phase": "complete",
+          "message": "Run finished successfully."
+        }
+      ]
+    }
+  }
+]

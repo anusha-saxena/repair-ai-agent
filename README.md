@@ -98,7 +98,21 @@ and tune the resource and submission limits. See [SECURITY.md](SECURITY.md) for
 Linux capability requirements, network restrictions, and the demo's limits.
 Use the supplied Compose deployment; `docker run` alone does not enforce egress.
 
-Start the frontend in another terminal:
+For Render, read the [deployment assessment](deploy/RENDER.md) first. Building
+the Dockerfile alone does not supply the sandbox's Compose runtime settings.
+The API accepts a `PORT` environment variable, but Render sandbox compatibility
+still needs confirmation or a separate worker implementation.
+
+## Static portfolio frontend
+
+The frontend displays recordings captured from real local repairs. It does not
+submit jobs, poll FastAPI, or call Anthropic. "Replay demo" reveals recorded
+activity every half second before showing the saved diagnosis, pass rates,
+repair attempts, and patch. Visitors can skip directly to results. The animation
+is explicitly labelled as a recorded replay, and event times refer to the original
+run. The live backend and CLI are still available separately.
+
+Start the frontend:
 
 ```sh
 cd frontend
@@ -107,14 +121,31 @@ npm ci
 npm run dev
 ```
 
-Set `VITE_API_URL` to the deployed API URL when building for production:
+Build the portfolio for production:
 
 ```sh
 npm run build
 ```
 
-The `frontend/dist/` directory can be served by your static host. Never put an
-Anthropic key in a `VITE_` variable. No production domain is assumed.
+Deploy on Vercel with Root Directory `frontend`, framework Vite, build command
+`npm run build`, and output directory `dist`. No environment variables or backend
+hosting are needed. Remove the old `VITE_API_URL` from Vercel; it is no longer used.
+Never put an Anthropic key in frontend settings.
+
+The three recordings live in `frontend/public/recordings/demos.json`. To refresh
+them from the Python project directory, with your local Anthropic key configured:
+
+```sh
+python demos/record.py --runs 5 --max-retries 3
+```
+
+**Recording uses real Anthropic credits and executes generated patches locally.**
+Use it only with the trusted curated demos, as with the local CLI. The script
+works on temporary copies and keeps the existing catalog unless every repair
+verifies. It publishes sanitized results without raw traces, credentials, or
+internal paths. Commit refreshed recordings and redeploy to update the website.
+The recorded patches are Claude-generated; timestamps and pass rates describe
+those particular sampled runs, rather than a guarantee of future behavior.
 
 API routes: `GET /demos`, `POST /run/{demo_id}` (no body), and
 `GET /status/{job_id}`. Job status is `queued`, `running`, `complete`, or `error`.
