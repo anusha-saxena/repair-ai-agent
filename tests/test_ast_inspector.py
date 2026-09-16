@@ -2,8 +2,8 @@
 from analysis.ast_inspector import ASTInspector
 
 
-def test_pollution_shared_state(fixture_root):
-    path = fixture_root / "order_dependency" / "test_pollution.py"
+def test_pollution_shared_state(project_root):
+    path = project_root / "demos" / "order_dependency" / "test_pollution.py"
     assert set(ASTInspector(path).detect_shared_state()) == {"SHARED_STATE"}
 
 

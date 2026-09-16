@@ -1,0 +1,7 @@
+{
+  "id": "shared_counter",
+  "display_name": "Shared counter",
+  "description": "A module counter leaks between tests that expect their own first increment.",
+  "target_test": "test_counter.py::test_b_first_increment",
+  "category_hint": "Order Dependency"
+}

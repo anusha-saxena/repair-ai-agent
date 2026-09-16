@@ -14,7 +14,7 @@ from analysis.classifier import FlakinessClassifier
 from execution.run import TestRunner
 
 
-def repair_test(target, runs=10, max_retries=3):
+def repair_test(target, runs=10, max_retries=3, on_result=None):
     """Try up to max_retries patches, restoring the original on failure."""
     if runs < 1 or max_retries < 1:
         raise ValueError("Runs and maximum attempts must be positive.")
@@ -29,9 +29,15 @@ def repair_test(target, runs=10, max_retries=3):
     evidence = runner.run_perturbations(runs)
     diagnosis = FlakinessClassifier(evidence).classify()
     suspicious_vars = ASTInspector(file_path).detect_shared_state()
+    report = {"diagnosis": diagnosis, "before": evidence, "after": evidence,
+              "suspicious_vars": suspicious_vars, "original_source": original,
+              "patched_source": original, "attempts": 0, "success": False}
     print(json.dumps(diagnosis, indent=2))
     if diagnosis["diagnosis_category"] == "Deterministic Pass":
         print("Test passes under all conditions. Nothing to repair.")
+        report["success"] = True
+        if on_result:
+            on_result(report)
         return 0
 
     agent = AIRepairAgent()
@@ -44,6 +50,7 @@ def repair_test(target, runs=10, max_retries=3):
     success = False
     try:
         for attempt in range(1, max_retries + 1):
+            report["attempts"] = attempt
             print(f"Repair attempt {attempt}/{max_retries}")
             result = {"attempt": attempt}
             try:
@@ -51,6 +58,8 @@ def repair_test(target, runs=10, max_retries=3):
                 result["patched_source"] = patch
                 file_path.write_text(patch, encoding=encoding)
                 new_evidence = runner.run_perturbations(runs)
+                report["after"] = new_evidence
+                report["patched_source"] = patch
                 result["evidence"] = new_evidence
                 if (new_evidence["full_suite_pass_rate"] == 100.0
                         and new_evidence["shuffled_pass_rate"] == 100.0):
@@ -74,6 +83,9 @@ def repair_test(target, runs=10, max_retries=3):
         if not success:
             shutil.copyfile(backup, file_path)
             print(f"Original file restored from {backup}.")
+        report["success"] = success
+        if on_result:
+            on_result(report)
 
 
 def positive_int(value):
@@ -91,9 +103,14 @@ def main(argv=None):
     parser.add_argument("--runs", type=positive_int, default=10)
     parser.add_argument("--max-retries", type=positive_int, default=3,
                         help="maximum total repair attempts (default: 3)")
+    parser.add_argument("--json-report", type=Path, help="write a structured result for the demo worker")
     args = parser.parse_args(argv)
     try:
-        return repair_test(args.target, args.runs, args.max_retries)
+        callback = None
+        if args.json_report:
+            def callback(report):
+                args.json_report.write_text(json.dumps(report), encoding="utf-8")
+        return repair_test(args.target, args.runs, args.max_retries, callback)
     except KeyboardInterrupt:
         print("Repair interrupted.", file=sys.stderr)
         return 130

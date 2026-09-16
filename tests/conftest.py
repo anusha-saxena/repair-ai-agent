@@ -36,8 +36,8 @@ def fixture_root(project_root):
 
 
 @pytest.fixture
-def pollution_copy(tmp_path, fixture_root):
+def pollution_copy(tmp_path, project_root):
     """Repairs and backups belong in a temporary directory."""
     path = tmp_path / "test_pollution.py"
-    shutil.copyfile(fixture_root / "order_dependency" / "test_pollution.py", path)
+    shutil.copyfile(project_root / "demos" / "order_dependency" / "test_pollution.py", path)
     return path

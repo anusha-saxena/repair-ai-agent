@@ -1,4 +1,7 @@
 from execution.run import TestRunner as Runner
+import json
+import subprocess
+import sys
 
 
 def test_order_dependency_pass_rates(pollution_copy):
@@ -11,3 +14,22 @@ def test_order_dependency_pass_rates(pollution_copy):
     assert any("Another test left shared state" in trace for trace in suite["failure_traces"])
     # Five shuffled samples do not give a reliable statistical threshold.
     assert 0.0 <= evidence["shuffled_pass_rate"] <= 100.0
+
+
+def test_cli_writes_structured_stable_result(project_root, fixture_root, tmp_path, monkeypatch):
+    """The API's report format also works on the no-repair path without a key."""
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    path = fixture_root / "stable" / "test_clean.py"
+    report_path = tmp_path / "report.json"
+    result = subprocess.run(
+        [sys.executable, str(project_root / "main.py"), f"{path}::test_addition",
+         "--runs", "1", "--json-report", str(report_path)],
+        capture_output=True, text=True, timeout=30,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    report = json.loads(report_path.read_text())
+    assert report["success"] is True
+    assert report["attempts"] == 0
+    assert report["diagnosis"]["diagnosis_category"] == "Deterministic Pass"
+    assert report["original_source"] == report["patched_source"] == path.read_text()
+    assert report["before"]["full_suite_pass_rate"] == report["after"]["full_suite_pass_rate"] == 100.0

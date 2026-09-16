@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+:root {
+  font-family: Arial, sans-serif;
+  color: #25342c;
+  background: #f6f4ee;
+  line-height: 1.6;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; }
+.page { max-width: 960px; margin: auto; padding: 0 24px; }
+header { padding: 42px 0 24px; border-bottom: 1px solid #d9dccd; }
+h1 { margin: 0; font-size: 36px; font-weight: 700; color: #2e4535; }
+h2 { font-size: 23px; font-weight: 600; margin: 0 0 12px; }
+h3 { font-size: 18px; font-weight: 600; margin: 0 0 10px; }
+h4 { font-weight: 600; margin: 18px 0 8px; }
+p { color: #687266; margin: 10px 0; }
+.intro { padding: 28px 0 20px; max-width: 720px; }
+.architecture-flow { color: #2e4535; font-weight: 600; margin: 18px 0; }
+.architecture-list { padding-left: 22px; list-style: disc; color: #687266; }
+.architecture-list li { margin: 12px 0; }
+.demo-heading { margin: 8px 0 20px; }
+.cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.card { background: #fffefa; border: 1px solid #d9dccd; border-radius: 6px; padding: 20px; display: flex; flex-direction: column; }
+.card.selected { border-color: #7c8e35; }
+.card p { font-size: 14px; flex: 1; margin: 0 0 20px; }
+button { background: #2e4535; color: #fffefa; padding: 10px 16px; border: 0; border-radius: 4px; font-size: 14px; cursor: pointer; }
+button:hover { background: #486048; }
+button:disabled { opacity: .5; cursor: wait; }
+button:focus-visible { outline: 3px solid #9caf51; outline-offset: 3px; }
+.progress, .results { background: #fffefa; border: 1px solid #d9dccd; border-radius: 6px; padding: 24px; margin-top: 28px; }
+.steps { color: #687266; }
+.current-step { font-weight: 700; color: #2e4535; text-decoration: underline; text-underline-offset: 4px; }
+.progress > p:last-child { font-size: 13px; }
+.badge { padding: 6px 10px; border-radius: 4px; font-size: 13px; font-weight: 600; }
+.success { background: #e6efdb; color: #4c612a; }
+.failure { background: #fbe6dc; color: #9c492c; }
+.description { font-size: 14px; }
+.result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin: 24px 0; }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+th, td { padding: 10px 8px; border-bottom: 1px solid #e6e8dd; }
+th { font-weight: 600; }
+.after { color: #526c31; font-weight: 600; }
+.notes p { font-size: 14px; }
+code { background: #eef0e5; padding: 3px 6px; border-radius: 3px; font-size: 13px; }
+.diff-heading { margin: 24px 0 12px; }
+.diff-heading > span { font-size: 13px; color: #687266; }
+.diff { overflow-x: auto; border: 1px solid #e3e6d9; }
+.error { margin-top: 24px; background: #f9e7df; color: #8d472e; padding: 16px; border-radius: 4px; }
+.how { margin-top: 36px; padding: 24px 0; }
+.how ol { padding-left: 22px; list-style: decimal; color: #687266; }
+.how li { margin: 8px 0; }
+.footnote { font-size: 12px; margin-top: 20px; }
+footer { border-top: 1px solid #d9dccd; padding: 22px 0; text-align: center; font-size: 14px; color: #687266; }
+footer span { color: #7c8e35; }
+
+@media (max-width: 700px) {
+  .cards, .result-grid { grid-template-columns: 1fr; }
+  .page { padding: 0 18px; }
+  header { padding-top: 28px; }
+  h1 { font-size: 30px; }
+  .progress, .results { padding: 18px; }
+}

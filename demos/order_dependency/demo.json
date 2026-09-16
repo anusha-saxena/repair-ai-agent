@@ -1,0 +1,7 @@
+{
+  "id": "order_dependency",
+  "display_name": "Shared dictionary",
+  "description": "One test leaves a dictionary dirty. The next expects a clean start.",
+  "target_test": "test_pollution.py::test_b_victim",
+  "category_hint": "Order Dependency"
+}

@@ -1,0 +1,6 @@
+{
+  "name": "flakedetective-demo", "private": true, "version": "1.0.0", "type": "module",
+  "scripts": {"dev": "vite", "build": "vite build", "preview": "vite preview"},
+  "dependencies": {"react": "^18.3.1", "react-dom": "^18.3.1", "react-diff-viewer-continued": "^3.4.0"},
+  "devDependencies": {"vite": "^7.0.0", "@vitejs/plugin-react": "^4.7.0", "tailwindcss": "^4.0.0", "@tailwindcss/vite": "^4.0.0"}
+}

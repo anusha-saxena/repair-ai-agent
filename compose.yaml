@@ -1,0 +1,48 @@
+services:
+  api:
+    build: .
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:?Set ANTHROPIC_API_KEY}
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:5173}
+      HTTPS_PROXY: http://proxy:3128
+      RATE_LIMIT_PER_HOUR: ${RATE_LIMIT_PER_HOUR:-5}
+      SANDBOX_WALL_SECONDS: ${SANDBOX_WALL_SECONDS:-90}
+      SANDBOX_CPU_SECONDS: ${SANDBOX_CPU_SECONDS:-60}
+      SANDBOX_MEMORY_MB: ${SANDBOX_MEMORY_MB:-512}
+      SANDBOX_PROCESSES: ${SANDBOX_PROCESSES:-32}
+    read_only: true
+    # Only the fixed sudo helper uses this capability to construct mount namespaces.
+    cap_add: [SYS_ADMIN, NET_ADMIN]
+    security_opt:
+      - seccomp=unconfined
+      - systempaths=unconfined
+    pids_limit: 128
+    mem_limit: 768m
+    volumes:
+      - jobs:/data
+      - work:/work
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+      - /run:size=8m,mode=755
+    networks: [restricted, ingress]
+    depends_on: [proxy]
+  proxy:
+    build:
+      context: .
+      dockerfile: deploy/proxy.Dockerfile
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+      - /run:size=8m,mode=1777
+      - /var/log/squid:size=8m,mode=1777
+    networks: [restricted, outbound]
+networks:
+  restricted:
+    internal: true
+  outbound: {}
+  ingress: {}
+volumes:
+  jobs: {}
+  work: {}

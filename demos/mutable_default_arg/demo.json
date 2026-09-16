@@ -1,0 +1,7 @@
+{
+  "id": "mutable_default_arg",
+  "display_name": "Mutable default argument",
+  "description": "A helper keeps a list between calls, so earlier tests change later results.",
+  "target_test": "test_defaults.py::test_b_fresh_list",
+  "category_hint": "Order Dependency"
+}

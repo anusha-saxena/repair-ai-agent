@@ -1,0 +1,2 @@
+Defaults:appuser env_keep += "HTTPS_PROXY SANDBOX_WALL_SECONDS SANDBOX_CPU_SECONDS SANDBOX_MEMORY_MB SANDBOX_PROCESSES"
+appuser ALL=(root) NOPASSWD: /usr/local/bin/flake-sandbox *

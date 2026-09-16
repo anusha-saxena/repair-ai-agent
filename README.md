@@ -69,7 +69,7 @@ affect its result.
 Example diagnosis targets:
 
 ```sh
-python execution/run.py test_fixtures/order_dependency/test_pollution.py::test_b_victim 5
+python execution/run.py demos/order_dependency/test_pollution.py::test_b_victim 5
 python execution/run.py test_fixtures/stable/test_clean.py::test_addition 5
 python execution/run.py test_fixtures/broken/test_real_bug.py::test_wrong_addition 5
 python execution/run.py test_fixtures/standalone_flaky/test_random.py::test_random_threshold 5
@@ -78,3 +78,68 @@ python execution/run.py test_fixtures/standalone_flaky/test_random.py::test_rand
 The random example has a 50% failure probability per draw, so a short sample
 can still pass or fail every time. Parser unit tests enforce the current strict
 format: one Python code block, with prose outside the block rejected.
+
+## Deployable demo
+
+The `demos/` catalog contains shared-dictionary, mutable-default, and shared-counter
+cases. Each submission repairs a temporary copy. No request can upload code or
+provide an execution path or URL.
+
+From the nested Python project directory, set `ANTHROPIC_API_KEY` in your shell
+or `.env`, and review the placeholder settings in `.env.example`:
+
+```sh
+docker compose up --build -d
+```
+
+The API is bound to localhost port 8000. Place a TLS reverse proxy in front of
+it for a public deployment. Set `FRONTEND_ORIGIN` to the exact frontend origin
+and tune the resource and submission limits. See [SECURITY.md](SECURITY.md) for
+Linux capability requirements, network restrictions, and the demo's limits.
+Use the supplied Compose deployment; `docker run` alone does not enforce egress.
+
+Start the frontend in another terminal:
+
+```sh
+cd frontend
+cp .env.example .env
+npm ci
+npm run dev
+```
+
+Set `VITE_API_URL` to the deployed API URL when building for production:
+
+```sh
+npm run build
+```
+
+The `frontend/dist/` directory can be served by your static host. Never put an
+Anthropic key in a `VITE_` variable. No production domain is assumed.
+
+API routes: `GET /demos`, `POST /run/{demo_id}` (no body), and
+`GET /status/{job_id}`. Job status is `queued`, `running`, `complete`, or `error`.
+A complete result has diagnosis, before/after rates, suspicious variables,
+original and patched source, repair attempts, and a success flag. An unsuccessful
+repair is a complete result with `success: false`; execution errors are `error`.
+The UI labels its Observe/Diagnose/Repair/Verify stages as elapsed-time estimates.
+
+Jobs become inaccessible after 24 hours. An asyncio sweep runs on startup and
+every hour, deleting expired SQLite rows and their working directories. It also
+removes old orphan directories. SQLite lives in the `jobs` named volume and
+working files in the `work` volume; restarting the API does not reset the rate
+limiter. The deployment intentionally runs one Uvicorn worker.
+
+API and retention tests run without credits as part of `python -m pytest -q`.
+The slow real repair test remains opt-in with `--run-slow`.
+
+Container checks can be repeated with placeholder credentials and default limits:
+
+```sh
+docker compose --env-file .env.example -p flakedetective-check up --build -d
+docker compose --env-file .env.example -p flakedetective-check exec -T api python - < deploy/check_sandbox.py
+docker compose --env-file .env.example -p flakedetective-check down --volumes
+```
+
+These probes make no Messages API calls. They check file permissions, resource
+limits, proxy allow/deny rules, expiry cleanup, and a short wall timeout.
+Use this isolated test project name when removing its disposable volumes.

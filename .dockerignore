@@ -1,0 +1,17 @@
+.env
+.env.*
+**/.env
+**/.env.*
+.git
+**/.git
+.venv
+venv
+**/venv
+**/.venv
+**/__pycache__
+**/.pytest_cache
+**/*.pyc
+frontend
+tests
+test_fixtures
+*.sqlite3*
