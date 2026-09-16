@@ -1,6 +1,7 @@
 import subprocess
 import sys
 import json
+from pathlib import Path
 class TestRunner:
     def __init__(self, test_file):
         self.target_test = test_file
@@ -11,6 +12,9 @@ class TestRunner:
             self.test_name = None
 
     def run_mode(self, mode, n):
+        """Run one mode and keep traces for repair feedback."""
+        if n < 1:
+            raise ValueError("Number of runs must be positive.")
         passes = 0
         failures = 0
         durations = []
@@ -24,15 +28,19 @@ class TestRunner:
             elif mode == "suite":
                 cmd = [sys.executable, "execution/process.py", self.file_path, "-p", "no:randomly"]
 
-            proc = subprocess.run(cmd, capture_output=True, text=True)
+            cmd[1] = str(Path(__file__).with_name("process.py"))
+            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+            if proc.returncode not in (0, 1):
+                raise RuntimeError(f"Pytest subprocess failed ({proc.returncode}):\n{proc.stdout}\n{proc.stderr}")
             lines = proc.stdout.strip().splitlines()
             if not lines:
-                continue
+                raise RuntimeError("Pytest subprocess returned no results.")
             try:
                 reports = json.loads(lines[-1])
-            except json.JSONDecodeError:
-                continue
+            except json.JSONDecodeError as exc:
+                raise RuntimeError("Pytest subprocess returned invalid JSON.") from exc
 
+            found_target = False
             for item in reports:
                 is_target = (
                     item["test_id"] == self.target_test
@@ -41,6 +49,7 @@ class TestRunner:
                 )
 
                 if is_target:
+                    found_target = True
                     durations.append(item["duration"])
                     if item["outcome"] == "passed":
                         passes += 1
@@ -48,6 +57,8 @@ class TestRunner:
                         failures += 1
                         failure_traces.append(item.get("failure_trace", ""))
                         exception_types.append(item.get("exception_type", ""))
+            if not found_target:
+                raise RuntimeError(f"No result for {self.target_test}:\n{proc.stdout}\n{proc.stderr}")
 
         total = passes + failures
         pass_rate = (passes / total) * 100 if total > 0 else 0
@@ -73,7 +84,8 @@ class TestRunner:
             "baseline_pass_rate": baseline_res["pass_rate"],
             "shuffled_pass_rate": shuffled_res["pass_rate"],
             "isolated_pass_rate": baseline_res["pass_rate"], 
-            "full_suite_pass_rate": suite_res["pass_rate"]
+            "full_suite_pass_rate": suite_res["pass_rate"],
+            "mode_results": {"baseline": baseline_res, "shuffled": shuffled_res, "suite": suite_res}
         }
 
 if __name__ == "__main__":

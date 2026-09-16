@@ -5,7 +5,7 @@ import json
 output_test_info = []
 
 def pytest_runtest_logreport(report):
-    if(report.when == "call"):
+    if report.when == "call" or (report.when in ("setup", "teardown") and report.failed):
         stdout = ""
         stderr = ""
         failure_trace = ""
