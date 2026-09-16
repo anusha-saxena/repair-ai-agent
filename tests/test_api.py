@@ -37,6 +37,7 @@ def test_catalog_contains_only_curated_demos(client):
     }
     assert "/Users/" not in response.text
     assert "source" not in response.json()[0]
+    assert "def test_" in response.json()[0]["original_source"]
 
 
 def test_unknown_demo_and_code_inputs_are_rejected(client):
@@ -195,3 +196,37 @@ def test_public_results_strip_traces_and_reject_secrets(tmp_path):
     report["patched_source"] = "KEY = 'key-value'"
     with pytest.raises(ValueError, match="private"):
         public_result(report, "key-value", tmp_path)
+
+
+def test_status_exposes_recorded_activity_only(client):
+    browser, app, _ = client
+    job_id = browser.post("/run/order_dependency").json()["job_id"]
+    path = app.state.store.work_root / job_id / "progress.json"
+    path.write_text(json.dumps([
+        {"kind": "observed", "elapsed_seconds": 3.0,
+         "rates": {"baseline_pass_rate": 100.0, "shuffled_pass_rate": 40.0, "full_suite_pass_rate": 0.0},
+         "failure_trace": "/private/path secret"},
+        {"kind": "repairing", "elapsed_seconds": 4.0, "attempt": 1},
+    ]))
+    response = browser.get(f"/status/{job_id}")
+    events = response.json()["activity"]
+    assert "isolated 100.0%, shuffled 40.0%, suite 0.0%" in events[0]["message"]
+    assert events[1]["phase"] == "repairing"
+    assert "secret" not in response.text
+    assert "/private/path" not in response.text
+
+
+def test_activity_reader_rejects_malformed_and_symlink_files(tmp_path):
+    from api.activity import read_activity
+    directory = tmp_path / "job"
+    directory.mkdir()
+    path = directory / "progress.json"
+    path.write_text("not json")
+    assert read_activity(directory) == []
+    path.write_text(json.dumps([{"kind": "unknown", "elapsed_seconds": 0}]))
+    assert read_activity(directory) == []
+    path.unlink()
+    outside = tmp_path / "outside.json"
+    outside.write_text(json.dumps([{"kind": "observing", "elapsed_seconds": 0}]))
+    path.symlink_to(outside)
+    assert read_activity(directory) == []

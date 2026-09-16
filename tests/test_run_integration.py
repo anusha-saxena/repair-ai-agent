@@ -21,9 +21,10 @@ def test_cli_writes_structured_stable_result(project_root, fixture_root, tmp_pat
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     path = fixture_root / "stable" / "test_clean.py"
     report_path = tmp_path / "report.json"
+    progress_path = tmp_path / "progress.json"
     result = subprocess.run(
         [sys.executable, str(project_root / "main.py"), f"{path}::test_addition",
-         "--runs", "1", "--json-report", str(report_path)],
+         "--runs", "1", "--json-report", str(report_path), "--progress-json", str(progress_path)],
         capture_output=True, text=True, timeout=30,
     )
     assert result.returncode == 0, result.stdout + result.stderr
@@ -33,3 +34,6 @@ def test_cli_writes_structured_stable_result(project_root, fixture_root, tmp_pat
     assert report["diagnosis"]["diagnosis_category"] == "Deterministic Pass"
     assert report["original_source"] == report["patched_source"] == path.read_text()
     assert report["before"]["full_suite_pass_rate"] == report["after"]["full_suite_pass_rate"] == 100.0
+    activity = json.loads(progress_path.read_text())
+    assert activity == report["activity"]
+    assert [event["kind"] for event in activity] == ["observing", "observed", "diagnosed", "completed"]

@@ -15,6 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from api.catalog import load_demos
+from api.activity import read_activity
 from api.runner import clean_directory, execute_job
 from api.store import JobStore
 
@@ -119,6 +120,7 @@ def create_app(database=None, work_root=None, demo_root=None, executor=None, rat
             raise HTTPException(404, "Job not found or expired.")
         response = {"job_id": row["id"], "demo_id": row["demo_id"], "status": row["status"],
                     "created_at": row["created_at"], "elapsed_seconds": max(0, time.time() - row["created_at"])}
+        response["activity"] = read_activity(app.state.store.work_root / row["id"], os.getenv("ANTHROPIC_API_KEY", ""))
         if row["result_json"] is not None:
             response["result"] = json.loads(row["result_json"])
         return response

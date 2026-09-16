@@ -24,6 +24,16 @@ p { color: #687266; margin: 10px 0; }
 .architecture-list { padding-left: 22px; list-style: disc; color: #687266; }
 .architecture-list li { margin: 12px 0; }
 .demo-heading { margin: 8px 0 20px; }
+.source-preview { margin: 12px 0 18px; }
+.source-preview summary { cursor: pointer; color: #2e4535; font-size: 14px; }
+.source-preview pre { padding: 14px; background: #eef0e5; border: 1px solid #d9dccd; overflow-x: auto; font: 13px/1.7 monospace; margin-top: 10px; white-space: pre; }
+.source-preview p { font-size: 13px; }
+.test-context, .activity-log { margin-top: 28px; }
+.test-context p, .activity-log p { font-size: 14px; }
+.activity-log ol { padding: 16px; background: #fffefa; border: 1px solid #d9dccd; border-radius: 6px; }
+.activity-log li { padding: 8px 0; font-size: 14px; border-bottom: 1px solid #e6e8dd; }
+.activity-log li:last-child { border-bottom: 0; }
+.event-time { display: inline-block; min-width: 48px; color: #687266; font: 12px monospace; }
 .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
 .card { background: #fffefa; border: 1px solid #d9dccd; border-radius: 6px; padding: 20px; display: flex; flex-direction: column; }
 .card.selected { border-color: #7c8e35; }

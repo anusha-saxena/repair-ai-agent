@@ -24,8 +24,27 @@ function Results({ result }) {
       <div><h3>Pass rates</h3><table><thead><tr><th>Mode</th><th>Before</th><th>After</th></tr></thead><tbody>{rateRows.map(([label, key]) => <tr key={key}><td>{label}</td><td>{result.before[key].toFixed(1)}%</td><td className="after">{result.after[key].toFixed(1)}%</td></tr>)}</tbody></table></div>
       <div className="notes"><h3>Evidence</h3><p>{result.attempts} repair attempt{result.attempts === 1 ? '' : 's'}</p><h4>Potential shared state</h4>{result.suspicious_vars.length ? <div className="flex flex-wrap gap-2">{result.suspicious_vars.map(name => <code key={name}>{name}</code>)}</div> : <p>No module variables detected. State can also hide in function defaults.</p>}</div>
     </div>
-    <div className="diff-heading"><h3>The change</h3><span>Original → {result.success ? 'verified repair' : 'last evaluated patch'}</span></div>
+    <details className="source-preview">
+      <summary>Read the full original test</summary>
+      <pre>{result.original_source}</pre>
+    </details>
+    <details className="source-preview">
+      <summary>Read the full {result.success ? 'patched test' : 'last evaluated patch'}</summary>
+      <pre>{result.patched_source}</pre>
+    </details>
+    <div className="diff-heading"><h3>Before and after</h3><span>Red: original lines · Green: added lines</span></div>
     <div className="diff"><DiffViewer oldValue={result.original_source} newValue={result.patched_source} splitView={false} leftTitle="Original" rightTitle="Patched" showDiffOnly={false} styles={{ variables: { light: { diffViewerBackground: '#fffefa', addedBackground: '#e6f2e7', removedBackground: '#fce7df' } }, contentText: { fontSize: '13px', lineHeight: '1.7' } }} /></div>
+  </section>;
+}
+
+function ActivityLog({ events }) {
+  if (!events?.length) return null;
+  return <section className="activity-log" aria-label="Execution activity">
+    <h2>Run log</h2>
+    <p>Recorded tool actions and measured results.</p>
+    <ol>{events.map((event, i) => (
+      <li key={i}><span className="event-time">{event.elapsed_seconds.toFixed(1)}s</span> {event.message}</li>
+    ))}</ol>
   </section>;
 }
 
@@ -77,7 +96,9 @@ export default function App() {
     } catch (err) { if (err.name !== 'AbortError') setError(err.message); setBusy(false); }
   }
 
-  const stage = job?.status === 'queued' ? 0 : Math.min(3, Math.floor((job?.elapsed_seconds || 0) / 12));
+  const events = result?.activity || job?.activity || [];
+  const phase = events.at(-1)?.phase;
+  const stage = ['observing', 'diagnosing', 'repairing', 'verifying'].indexOf(phase);
   return <div className="page">
     <header>
       <h1>FlakeDetective<span className="title-dot" aria-hidden="true" /></h1>
@@ -113,6 +134,11 @@ export default function App() {
               <article className={`card ${active?.id === demo.id ? 'selected' : ''}`} key={demo.id}>
                 <h3>{demo.display_name}</h3>
                 <p>{demo.description}</p>
+                <details className="source-preview">
+                  <summary>View original test</summary>
+                  <p>Target: <code>{demo.target_test.split('::')[1]}</code></p>
+                  <pre>{demo.original_source}</pre>
+                </details>
                 <button disabled={busy} onClick={() => run(demo)}>
                   {busy && active?.id === demo.id ? 'Running…' : 'Run Demo'}
                 </button>
@@ -122,6 +148,17 @@ export default function App() {
         )}
       </section>
       {error && <div className="error" role="alert">{error}</div>}
+      {active && job && (
+        <section className="test-context">
+          <h2>The test being investigated</h2>
+          <p>{active.description}</p>
+          <p>Target: <code>{active.target_test.split('::')[1]}</code>. The other tests in this file provide its execution context.</p>
+          <details className="source-preview" open>
+            <summary>Original source</summary>
+            <pre>{active.original_source}</pre>
+          </details>
+        </section>
+      )}
       {busy && (
         <section className="progress" aria-live="polite">
           <h2>Running: {active?.display_name}</h2>
@@ -134,9 +171,10 @@ export default function App() {
             ))}
           </p>
           <p>{job?.status === 'queued' ? 'Your demo is queued.' : 'Testing and checking the fix…'}
-            {' '}The steps shown are estimated from elapsed time.</p>
+            {' '}Progress updates when the tool records an action.</p>
         </section>
       )}
+      <ActivityLog events={events}/>
       {result && <Results result={result}/>}
       <section className="how">
         <h2>About this demo</h2>

@@ -5,6 +5,7 @@ import math
 import os
 import subprocess
 from pathlib import Path
+from api.activity import public_activity
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,7 @@ def public_result(report, secret, work_root):
         "suspicious_vars": report["suspicious_vars"],
         "original_source": report["original_source"], "patched_source": report["patched_source"],
         "attempts": report["attempts"], "success": report["success"],
+        "activity": public_activity(report.get("activity", [])),
     }
     for group in (result["before"], result["after"]):
         if not all(type(value) in (int, float) and math.isfinite(value) and 0 <= value <= 100

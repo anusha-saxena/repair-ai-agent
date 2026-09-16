@@ -121,7 +121,10 @@ API routes: `GET /demos`, `POST /run/{demo_id}` (no body), and
 A complete result has diagnosis, before/after rates, suspicious variables,
 original and patched source, repair attempts, and a success flag. An unsuccessful
 repair is a complete result with `success: false`; execution errors are `error`.
-The UI labels its Observe/Diagnose/Repair/Verify stages as elapsed-time estimates.
+The UI shows recorded Observe/Diagnose/Repair/Verify events, pass-rate summaries,
+and retry outcomes. Original demo source can be viewed before submitting a job.
+The run log describes tool actions; it does not expose model internal reasoning,
+raw tracebacks, or subprocess output.
 
 Jobs become inaccessible after 24 hours. An asyncio sweep runs on startup and
 every hour, deleting expired SQLite rows and their working directories. It also

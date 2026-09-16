@@ -26,6 +26,7 @@ def load_demos(root):
         public = {key: data[key] for key in ("id", "display_name", "description", "target_test", "category_hint")}
         if not all(isinstance(value, str) for value in public.values()):
             raise ValueError("Demo metadata must contain strings")
+        public["original_source"] = source.read_text(encoding="utf-8")
         demos[demo_id] = {"manifest": public, "source": source, "test_name": test_name}
     if not demos:
         raise ValueError("Demo catalog is empty")

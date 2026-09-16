@@ -128,7 +128,8 @@ def main():
         command.extend(["--ro-bind", "/lib64", "/lib64"])
     command.extend(["--remount-ro", "/", "--disable-userns"])
     command.extend(["/usr/local/bin/python", "/app/main.py", target, "--runs", "5",
-                    "--max-retries", "3", "--json-report", "/job/result.json"])
+                    "--max-retries", "3", "--json-report", "/job/result.json",
+                    "--progress-json", "/job/progress.json"])
     environment = {"PATH": "/usr/local/bin:/usr/bin:/bin", "HOME": "/job", "TMPDIR": "/job",
                    "PYTHONDONTWRITEBYTECODE": "1", "ANTHROPIC_API_KEY": credentials["api_key"],
                    "HTTPS_PROXY": proxy_url, "PYTHONUNBUFFERED": "1"}
